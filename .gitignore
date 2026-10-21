@@ -1,0 +1,6 @@
+.env
+parking-guard.env
+data/
+__pycache__/
+*.pyc
+*.tmp

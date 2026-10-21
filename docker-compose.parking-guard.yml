@@ -1,0 +1,23 @@
+# 叠加在 TeslaMate 官方 docker-compose.yml 之上使用：
+#   docker compose -f docker-compose.yml -f docker-compose.parking-guard.yml up -d
+#
+# parking-guard 不依赖本 compose 项目里的 mosquitto：不声明 depends_on，
+# MQTT_HOST / MQTT_PORT 完全由 parking-guard.env 决定，可指向同项目服务、
+# 宿主机或任意外部 MQTT broker。
+services:
+  parking-guard:
+    build: ./parking-guard
+    container_name: parking-guard
+    restart: unless-stopped
+    env_file:
+      - ./parking-guard/parking-guard.env
+    environment:
+      TZ: Asia/Shanghai
+      STATE_FILE: /data/parking_state.json
+    volumes:
+      - ./parking-guard/data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
