@@ -1,0 +1,83 @@
+image:
+  # 使用项目根目录的 Dockerfile 构建并推送到自己的镜像仓库。
+  repository: parking-guard
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# 与 parking-guard.env.example 使用相同的环境变量名；所有值建议加引号。
+# PARK_LAT、PARK_LON、MQTT_HOST 必填。STATE_FILE 由 chart 固定到 /data。
+config:
+  PARK_LAT: ""
+  PARK_LON: ""
+  PARK_PLACE: "停车场"
+  PARK_RADIUS_ENTER: "80"
+  PARK_RADIUS_EXIT: "150"
+  PARK_CONFIRM_SECONDS: "90"
+  PARK_REQUIRE_P: "1"
+  PARK_ACCEPT_UNKNOWN_SHIFT: "1"
+  DISCOUNT_MINUTES: "180"
+  WARN_MINUTES: "30,10,5"
+  EXIT_BUFFER_MINUTES: "10"
+  MAX_SESSION_HOURS: "14"
+  MQTT_HOST: ""
+  MQTT_PORT: "1883"
+  MQTT_TLS: "0"
+  MQTT_TLS_INSECURE: "0"
+  MQTT_PREFIX: "teslamate/cars"
+  CAR_ID: "1"
+  BARK_SERVER: "https://api.day.app"
+  BARK_GROUP: "停车场"
+  BARK_SOUND: "alarm"
+  BARK_LEVEL: "timeSensitive"
+  BARK_EXTRA_QUERY: ""
+  TICK_SECONDS: "15"
+  STATUS_LOG_SECONDS: "300"
+  LOG_LEVEL: "INFO"
+  TZ: "Asia/Shanghai"
+
+secrets:
+  # 指定后不创建 Secret，直接从同 namespace 的现有 Secret 注入环境变量。
+  # 使用 BARK_KEY、MQTT_USERNAME、MQTT_PASSWORD 作为键；未使用的键可以省略。
+  existingSecret: ""
+  BARK_KEY: ""
+  MQTT_USERNAME: ""
+  MQTT_PASSWORD: ""
+
+persistence:
+  enabled: true
+  # 指定后复用现有 PVC，不创建新 PVC。
+  existingClaim: ""
+  # 留空使用集群默认 StorageClass。
+  storageClass: ""
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

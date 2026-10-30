@@ -1,6 +1,8 @@
 .env
 parking-guard.env
+parking-guard.values.yaml
 data/
 __pycache__/
 *.pyc
 *.tmp
+/charts/parking-guard/values-production.yaml

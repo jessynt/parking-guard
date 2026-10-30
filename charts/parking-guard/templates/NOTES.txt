@@ -1,0 +1,8 @@
+parking-guard 已配置为单实例，状态文件：/data/parking_state.json。
+
+查看日志，确认出现 “MQTT 已连接”：
+  kubectl logs -n {{ .Release.Namespace }} deployment/{{ include "parking-guard.fullname" . }} -f
+
+{{- if not .Values.persistence.enabled }}
+当前使用 emptyDir，Pod 重建后计时状态会丢失。
+{{- end }}

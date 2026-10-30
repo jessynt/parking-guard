@@ -43,6 +43,57 @@ docker logs -f parking-guard
 
 `MQTT_HOST` / `MQTT_PORT` 由 `parking-guard.env` 指定，不依赖 compose 里的 `mosquitto`。改代码后需要重新 `--build`，状态保存在 `parking-guard/data`。
 
+## Helm / Kubernetes
+
+Chart 位于 [`charts/parking-guard`](charts/parking-guard)，固定 `replicas: 1`，使用 `Recreate` 策略：升级时先停止旧 Pod，再启动新 Pod。程序只向外连接 MQTT 和 Bark，不创建 Service 或 Ingress。
+
+先用项目的 Dockerfile 构建镜像，推送到集群可访问的仓库（将示例仓库地址换成自己的）：
+
+```bash
+docker build -t registry.example.com/parking-guard:0.1.0 .
+docker push registry.example.com/parking-guard:0.1.0
+cp charts/parking-guard/values.yaml parking-guard.values.yaml
+```
+
+编辑 `parking-guard.values.yaml`，至少修改以下字段。该文件已加入 `.gitignore`。
+本地 `charts/parking-guard/values-production.yaml` 也已从 Git 和 Helm chart 包中排除；生产凭据保存在私有部署仓库中。
+
+```yaml
+image:
+  repository: registry.example.com/parking-guard
+  tag: "0.1.0"
+config:
+  PARK_LAT: "31.230416"
+  PARK_LON: "121.473701"
+  MQTT_HOST: "mosquitto.teslamate.svc.cluster.local"
+secrets:
+  BARK_KEY: "你的BarkKey"
+  MQTT_USERNAME: ""
+  MQTT_PASSWORD: ""
+```
+
+坐标和 MQTT 地址需替换为实际值；`BARK_KEY` 留空时只记日志。其余环境变量可在 `config` 中配置，凭据放在 `secrets` 中；`STATE_FILE` 固定为 `/data/parking_state.json`。私有镜像仓库可通过 `imagePullSecrets` 引用同 namespace 的拉取凭据。
+
+检查并部署：
+
+```bash
+helm lint ./charts/parking-guard -f parking-guard.values.yaml
+helm upgrade --install parking-guard ./charts/parking-guard \
+  --namespace parking-guard --create-namespace \
+  -f parking-guard.values.yaml --wait --timeout 5m
+kubectl logs -n parking-guard deployment/parking-guard -f
+```
+
+默认创建 `1Gi` 的 `ReadWriteOnce` PVC 保存计时状态，使用集群默认 StorageClass。没有默认 StorageClass 时，设置 `persistence.storageClass`，或用 `persistence.existingClaim` 引用同 namespace 的现有 PVC。容器默认使用 UID/GID `10001`，PVC 需允许该用户组写入 `/data`。Chart 创建的 PVC 会在卸载时保留；不再需要状态时再手动删除。`persistence.enabled: false` 改用 `emptyDir`，Pod 重建会丢失计时状态。
+
+也可以用 `secrets.existingSecret` 引用同 namespace 的现有 Secret，此时 chart 不创建 Secret，也不使用 `secrets` 下的凭据值。Secret 的键名使用 `BARK_KEY`、`MQTT_USERNAME`、`MQTT_PASSWORD`，未使用的键可省略。直接填写的凭据会保存在 Helm release 中；已有凭据管理流程时可使用现有 Secret。
+
+修改 chart 管理的配置或凭据后，执行同一条 `helm upgrade --install` 命令即可触发重建。修改现有 Secret 的内容后，需要手动重启：
+
+```bash
+kubectl rollout restart deployment/parking-guard -n parking-guard
+```
+
 ## 配置
 
 完整配置见 `parking-guard.env.example`。

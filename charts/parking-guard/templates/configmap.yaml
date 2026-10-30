@@ -1,0 +1,13 @@
+{{- $lat := required "请设置 config.PARK_LAT（WGS-84 纬度）" .Values.config.PARK_LAT -}}
+{{- $lon := required "请设置 config.PARK_LON（WGS-84 经度）" .Values.config.PARK_LON -}}
+{{- $host := required "请设置 config.MQTT_HOST" .Values.config.MQTT_HOST -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "parking-guard.fullname" . }}
+  labels:
+    {{- include "parking-guard.labels" . | nindent 4 }}
+data:
+  {{- range $name, $value := .Values.config }}
+  {{ $name }}: {{ $value | toString | quote }}
+  {{- end }}
